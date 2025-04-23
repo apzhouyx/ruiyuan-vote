@@ -322,6 +322,46 @@
         .building.shop.has-votes::before {
             background: linear-gradient(to top, #ff9800 0%, transparent 100%);
         }
+        .stats-module {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stats-module h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 18px;
+        }
+        
+        .stats-content {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        
+        .stats-item {
+            flex: 1;
+            padding: 10px;
+        }
+        
+        .stats-item .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2196F3;
+            margin-bottom: 5px;
+        }
+        
+        .stats-item .label {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .completion-rate {
+            color: #4CAF50;
+        }
     </style>
 </head>
 <body>
@@ -330,63 +370,47 @@
     <div class="main-container">
         <div class="left-section">
             <div class="search-container">
-                <input type="text" 
-                       class="search-input" 
-                       placeholder="搜索楼栋..." 
-                       oninput="VotingUI.filterBuildings(this.value)"
-                >
-                <span id="searchResult"></span>
-            </div>
-    <div class="building-container">
-                <!-- 动态生成楼栋按钮 -->
-    </div>
-    
-    <div id="infoPanel" class="info-panel">
-        <h3 class="building-title">
-            <span id="buildingTitle"></span>
-            <span id="selectedCount" class="selected-count">尚未选择任何户号</span>
-        </h3>
-        
-        <div id="unitTabs" class="unit-tabs">
-            <!-- 单元标签将通过JS动态生成 -->
+                <input type="text" id="buildingSearch" placeholder="搜索楼栋..." oninput="VotingUI.filterBuildings(this.value)">
         </div>
-        
-        <div id="unitTables">
-            <!-- 单元表格将通过JS动态生成 -->
+            <div id="communityStats" class="stats-module">
+                <h3>小区投票统计</h3>
+                <div class="stats-content">
+                    <div class="stats-item">
+                        <div class="value" id="totalUnits">0</div>
+                        <div class="label">总户数</div>
         </div>
-        
-        <div class="action-buttons">
-                    <button class="reset-btn" onclick="VotingApp.resetSelection()">重置选择</button>
-                    <button class="vote-btn" onclick="VotingApp.submitVote()">提交投票</button>
-                </div>
-            </div>
+                    <div class="stats-item">
+                        <div class="value" id="votedUnits">0</div>
+                        <div class="label">已投票户数</div>
+        </div>
+                    <div class="stats-item">
+                        <div class="value completion-rate" id="completionRate">0%</div>
+                        <div class="label">完成率</div>
+        </div>
+        </div>
+        </div>
+            <div id="buildingContainer" class="building-container">
+                <!-- Buildings will be dynamically added here -->
+        </div>
         </div>
         
         <div class="right-section">
-            <div class="community-stats">
-                <div class="stats-title">小区投票统计</div>
-                <div class="progress-circle">
-                    <canvas id="progressCanvas"></canvas>
-                    <div class="progress-info">
-                        <div class="progress-percentage">0%</div>
-                        <div class="progress-label">总体完成率</div>
-                    </div>
-                </div>
-                <div class="stats-details">
-                    <div class="stats-item">
-                        <span class="stats-item-label">总户数</span>
-                        <span class="stats-item-value" id="totalUnits">0</span>
-                    </div>
-                    <div class="stats-item">
-                        <span class="stats-item-label">已投票户数</span>
-                        <span class="stats-item-value" id="votedUnits">0</span>
-                    </div>
-                    <div class="stats-item">
-                        <span class="stats-item-label">剩余户数</span>
-                        <span class="stats-item-value" id="remainingUnits">0</span>
-                    </div>
-                </div>
-            </div>
+            <div id="unitSelectionPanel" class="info-panel">
+                <div class="building-title">
+                    <h3 id="selectedBuildingTitle">选择户号</h3>
+                    <div id="selectedCount" class="selected-count">尚未选择任何户号</div>
+        </div>
+                <div id="unitTabs" class="unit-tabs">
+                    <!-- Unit tabs will be added here -->
+        </div>
+                <div id="unitTables">
+                    <!-- Unit tables will be added here -->
+        </div>
+                <div class="action-buttons">
+                    <button class="reset-btn" onclick="VotingApp.resetSelection()">重置选择</button>
+                    <button class="vote-btn" onclick="VotingApp.submitVote()">提交投票</button>
+        </div>
+    </div>
         </div>
     </div>
 

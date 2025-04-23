@@ -66,24 +66,46 @@ class VotingUI {
         if (building.isShop) {
             return building.unitsPerFloor;
         }
-        const floors = building.floorRange 
-            ? building.floorRange.end - building.floorRange.start + 1
-            : CONFIG.FLOOR_RANGE.END - CONFIG.FLOOR_RANGE.START + 1;
-        return building.units * building.unitsPerFloor * floors;
+        
+        let total = 0;
+        const floorStart = building.floorRange ? building.floorRange.start : CONFIG.FLOOR_RANGE.START;
+        const floorEnd = building.floorRange ? building.floorRange.end : CONFIG.FLOOR_RANGE.END;
+        
+        if (building.specialFloors) {
+            // 特殊楼层配置
+            for (let floor = floorStart; floor <= floorEnd; floor++) {
+                const floorConfig = building.specialFloors[floor];
+                const unitsPerFloor = floorConfig ? floorConfig.unitsPerFloor : 1;
+                total += building.units * unitsPerFloor;
+            }
+        } else {
+            // 普通楼层配置
+            total = building.units * building.unitsPerFloor * (floorEnd - floorStart + 1);
+        }
+        
+        return total;
     }
 
     static updateCommunityStats(voted, total) {
-        const statsElement = document.getElementById('communityStats');
-        if (statsElement) {
-            const percentage = ((voted / total) * 100).toFixed(1);
-            statsElement.innerHTML = `
-                <h3>小区投票统计</h3>
-                <p>总户数：${total}</p>
-                <p>已投票：${voted}</p>
-                <p>完成率：${percentage}%</p>
-                <div class="progress-bar" style="width: ${percentage}%"></div>
-            `;
-        }
+        const statsContainer = document.getElementById('communityStats');
+        const completionRate = ((voted / total) * 100).toFixed(1);
+
+        statsContainer.innerHTML = `
+            <div class="stats-content">
+                <div class="stats-item">
+                    <span class="stats-label">总户数：</span>
+                    <span class="stats-value">${total}</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">已投票户数：</span>
+                    <span class="stats-value">${voted}</span>
+                </div>
+                <div class="stats-item">
+                    <span class="stats-label">完成率：</span>
+                    <span class="stats-value">${completionRate}%</span>
+                </div>
+            </div>
+        `;
     }
 
     static updateVotedUnits(votedUnits) {
@@ -162,22 +184,60 @@ class VotingUI {
     static createTableBody(building) {
         const tbody = document.createElement('tbody');
         
-        // 获取楼栋特定的楼层范围，如果没有则使用默认范围
+        // 获取楼栋特定的楼层范围
         const floorStart = building.floorRange ? building.floorRange.start : CONFIG.FLOOR_RANGE.START;
         const floorEnd = building.floorRange ? building.floorRange.end : CONFIG.FLOOR_RANGE.END;
         
-        for (let floor = floorStart; floor <= floorEnd; floor++) {
-            const row = document.createElement('tr');
-            row.appendChild(this.createCell(`${floor}层`));
-            
+        // 特殊处理12-17栋
+        if (building.code.match(/^C(1[2-7])$/)) {
+            // 1-2层
+            const row1_2 = document.createElement('tr');
+            row1_2.appendChild(this.createCell('1-2层'));
             for (let unit = 1; unit <= building.units; unit++) {
-                for (let u = 1; u <= building.unitsPerFloor; u++) {
-                    const unitCode = this.generateUnitCode(building.code, unit, floor, u);
-                    row.appendChild(this.createUnitCell(unitCode));
+                for (let u = 1; u <= 2; u++) {
+                    const unitCode = this.generateUnitCode(building.code, unit, 1, u);
+                    row1_2.appendChild(this.createUnitCell(unitCode));
                 }
             }
-            
-            tbody.appendChild(row);
+            tbody.appendChild(row1_2);
+
+            // 3-5层分别显示
+            for (let floor = 3; floor <= 5; floor++) {
+                const row = document.createElement('tr');
+                row.appendChild(this.createCell(`${floor}层`));
+                for (let unit = 1; unit <= building.units; unit++) {
+                    const unitCode = this.generateUnitCode(building.code, unit, floor, 1);
+                    row.appendChild(this.createUnitCell(unitCode));
+                }
+                tbody.appendChild(row);
+            }
+
+            // 6-7层
+            const row6_7 = document.createElement('tr');
+            row6_7.appendChild(this.createCell('6-7层'));
+            for (let unit = 1; unit <= building.units; unit++) {
+                const unitCode = this.generateUnitCode(building.code, unit, 6, 1);
+                row6_7.appendChild(this.createUnitCell(unitCode));
+            }
+            tbody.appendChild(row6_7);
+        } else {
+            // 其他楼栋保持原有逻辑
+            for (let floor = floorStart; floor <= floorEnd; floor++) {
+                const row = document.createElement('tr');
+                row.appendChild(this.createCell(`${floor}层`));
+                
+                const floorConfig = building.specialFloors ? building.specialFloors[floor] : null;
+                const unitsPerFloor = floorConfig ? floorConfig.unitsPerFloor : building.unitsPerFloor;
+                
+                for (let unit = 1; unit <= building.units; unit++) {
+                    for (let u = 1; u <= unitsPerFloor; u++) {
+                        const unitCode = this.generateUnitCode(building.code, unit, floor, u);
+                        row.appendChild(this.createUnitCell(unitCode));
+                    }
+                }
+                
+                tbody.appendChild(row);
+            }
         }
         
         return tbody;
@@ -317,9 +377,20 @@ class VotingUI {
             const percentage = ((votedCount / totalUnits) * 100).toFixed(1);
             statsElement.innerHTML = `
                 <h3>小区投票统计</h3>
-                <p>总户数：${totalUnits}</p>
-                <p>已投票：${votedCount}</p>
-                <p>完成率：${percentage}%</p>
+                <div class="stats-content">
+                    <div class="stats-item">
+                        <span class="stats-label">总户数：</span>
+                        <span class="stats-value">${totalUnits}</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">已投票：</span>
+                        <span class="stats-value">${votedCount}</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">完成率：</span>
+                        <span class="stats-value">${percentage}%</span>
+                    </div>
+                </div>
                 <div class="progress-bar" style="width: ${percentage}%"></div>
             `;
         }
@@ -336,6 +407,51 @@ class VotingUI {
             }
         });
         this.updateVoteStatistics();
+    }
+
+    updateCommunityStats() {
+        const totalUnits = this.buildings.reduce((sum, building) => sum + building.units, 0);
+        const votedUnits = this.buildings.reduce((sum, building) => sum + building.votedUnits, 0);
+        const completionRate = ((votedUnits / totalUnits) * 100).toFixed(1);
+
+        document.getElementById('totalUnits').textContent = totalUnits;
+        document.getElementById('votedUnits').textContent = votedUnits;
+        document.getElementById('completionRate').textContent = `${completionRate}%`;
+    }
+
+    updateUI() {
+        this.updateBuildingButtons();
+        this.updateCommunityStats();
+    }
+
+    async initialize() {
+        try {
+            const response = await this.api.getVotingData();
+            this.buildings = response.data;
+            this.updateUI();
+            this.setupEventListeners();
+        } catch (error) {
+            console.error('初始化失败:', error);
+        }
+    }
+
+    setupEventListeners() {
+        const searchInput = document.getElementById('buildingSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => this.filterBuildings(e.target.value));
+        }
+    }
+
+    filterBuildings(searchText) {
+        const buildingButtons = document.querySelectorAll('.building-button');
+        buildingButtons.forEach(button => {
+            const buildingName = button.textContent.toLowerCase();
+            if (buildingName.includes(searchText.toLowerCase())) {
+                button.style.display = 'block';
+            } else {
+                button.style.display = 'none';
+            }
+        });
     }
 }
 

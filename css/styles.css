@@ -1,9 +1,18 @@
+#voteChart {
+    margin-top: 20px;
+    display: block;
+    max-width: 200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 #communityStats {
     background-color: #fff;
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     margin-bottom: 20px;
+    text-align: center;
 }
 
 #communityStats h3 {
@@ -54,4 +63,35 @@
 
 .unit-btn.voted:hover {
     background-color: #ff4444;
-} 
+}
+
+.stats-content {
+    padding: 15px;
+    background: #fff;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.stats-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 8px 0;
+    padding: 5px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.stats-item:last-child {
+    border-bottom: none;
+}
+
+.stats-label {
+    color: #666;
+    font-size: 14px;
+}
+
+.stats-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #2c3e50;
+}
