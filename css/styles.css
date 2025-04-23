@@ -1,0 +1,57 @@
+#communityStats {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+#communityStats h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+#communityStats p {
+    margin: 8px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+#communityStats .progress-bar {
+    height: 8px;
+    background-color: #4CAF50;
+    border-radius: 4px;
+    margin-top: 10px;
+    transition: width 0.3s ease;
+}
+
+.unit-btn {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.unit-btn:hover {
+    background-color: #e3f2fd;
+}
+
+.unit-btn.selected {
+    background-color: #2196f3;
+    color: white;
+    border-color: #1976d2;
+}
+
+.unit-btn.voted {
+    background-color: #ff4444;
+    color: white;
+    border-color: #cc0000;
+    cursor: not-allowed;
+}
+
+.unit-btn.voted:hover {
+    background-color: #ff4444;
+} 

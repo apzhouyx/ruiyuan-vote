@@ -16,97 +16,74 @@ class VotingUI {
 
     static updateBuildingProgress(buildingData) {
         const buildings = document.querySelectorAll('.building');
-        let totalUnits = CONFIG.TOTAL_UNITS; // 使用配置的总户数
+        const voteState = this.getVoteState();
         let totalVoted = 0;
+        let totalUnits = CONFIG.TOTAL_UNITS;
 
+        // 遍历所有楼栋更新状态
         buildings.forEach(building => {
             const buildingCode = building.getAttribute('data-code');
-            const data = buildingData[buildingCode];
             const buildingConfig = CONFIG.BUILDINGS.find(b => b.code === buildingCode);
             
-            // 移除旧的百分比显示元素
-            const oldPercentage = building.querySelector('.vote-percentage');
-            if (oldPercentage) {
-                oldPercentage.remove();
-            }
-
-            // 添加商铺特殊样式
-            if (buildingConfig.isShop) {
-                building.classList.add('shop');
-            }
-
-            if (data) {
-                totalVoted += data.voted;
-                const percentage = (data.voted / data.total) * 100;
-                
-                // 更新渐变色
-                building.style.setProperty('--vote-percentage', percentage / 100);
-                building.classList.toggle('has-votes', percentage > 0);
-
-                // 添加百分比文本
-                const percentageDiv = document.createElement('div');
-                percentageDiv.className = 'vote-percentage';
-                percentageDiv.textContent = `${percentage.toFixed(1)}%`;
-                building.appendChild(percentageDiv);
-
-                // 更新描述文本
-                const descDiv = building.querySelector('.building-desc');
-                if (descDiv) {
-                    const building = CONFIG.BUILDINGS.find(b => b.code === buildingCode);
-                    descDiv.textContent = `${buildingCode}, ${building.units > 1 ? building.units + '单元, ' : ''}${data.voted}/${data.total}户`;
+            // 计算该楼栋的投票数
+            let buildingVoted = 0;
+            Object.keys(voteState).forEach(unitCode => {
+                if (unitCode.startsWith(buildingCode) && voteState[unitCode].voted) {
+                    buildingVoted++;
                 }
+            });
+
+            // 计算楼栋总户数
+            const buildingTotal = this.calculateBuildingTotal(buildingConfig);
+            
+            // 更新楼栋显示
+            const percentage = (buildingVoted / buildingTotal) * 100;
+            
+            // 更新进度条
+            building.style.setProperty('--vote-percentage', percentage / 100);
+            building.classList.toggle('has-votes', percentage > 0);
+            
+            // 更新百分比显示
+            const percentageDiv = building.querySelector('.vote-percentage') || document.createElement('div');
+            percentageDiv.className = 'vote-percentage';
+            percentageDiv.textContent = `${percentage.toFixed(1)}%`;
+            building.appendChild(percentageDiv);
+
+            // 更新描述文本
+            const descDiv = building.querySelector('.building-desc');
+            if (descDiv) {
+                descDiv.textContent = `${buildingCode}${buildingConfig.units > 1 ? ', ' + buildingConfig.units + '单元' : ''}, ${buildingVoted}/${buildingTotal}户`;
             }
+
+            totalVoted += buildingVoted;
         });
 
-        // 更新总体统计信息
+        // 更新总体统计
         this.updateCommunityStats(totalVoted, totalUnits);
     }
 
-    static updateCommunityStats(votedUnits, totalUnits) {
-        // 更新数字统计
-        document.getElementById('totalUnits').textContent = totalUnits;
-        document.getElementById('votedUnits').textContent = votedUnits;
-        document.getElementById('remainingUnits').textContent = totalUnits - votedUnits;
-
-        // 更新百分比显示
-        const percentage = totalUnits > 0 ? (votedUnits / totalUnits) * 100 : 0;
-        document.querySelector('.progress-percentage').textContent = `${percentage.toFixed(1)}%`;
-
-        // 更新圆形进度条
-        this.drawProgressCircle(percentage);
+    static calculateBuildingTotal(building) {
+        if (building.isShop) {
+            return building.unitsPerFloor;
+        }
+        const floors = building.floorRange 
+            ? building.floorRange.end - building.floorRange.start + 1
+            : CONFIG.FLOOR_RANGE.END - CONFIG.FLOOR_RANGE.START + 1;
+        return building.units * building.unitsPerFloor * floors;
     }
 
-    static drawProgressCircle(percentage) {
-        const canvas = document.getElementById('progressCanvas');
-        const ctx = canvas.getContext('2d');
-        const width = 200;
-        const height = 200;
-        const centerX = width / 2;
-        const centerY = height / 2;
-        const radius = 80;
-        const startAngle = -Math.PI / 2;
-        const endAngle = startAngle + (percentage / 100) * Math.PI * 2;
-
-        // 设置画布大小
-        canvas.width = width;
-        canvas.height = height;
-
-        // 清除画布
-        ctx.clearRect(0, 0, width, height);
-
-        // 绘制背景圆环
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = '#f0f0f0';
-        ctx.lineWidth = 15;
-        ctx.stroke();
-
-        // 绘制进度圆环
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-        ctx.strokeStyle = percentage === 100 ? '#ff6b6b' : '#4CAF50';
-        ctx.lineWidth = 15;
-        ctx.stroke();
+    static updateCommunityStats(voted, total) {
+        const statsElement = document.getElementById('communityStats');
+        if (statsElement) {
+            const percentage = ((voted / total) * 100).toFixed(1);
+            statsElement.innerHTML = `
+                <h3>小区投票统计</h3>
+                <p>总户数：${total}</p>
+                <p>已投票：${voted}</p>
+                <p>完成率：${percentage}%</p>
+                <div class="progress-bar" style="width: ${percentage}%"></div>
+            `;
+        }
     }
 
     static updateVotedUnits(votedUnits) {
@@ -146,11 +123,9 @@ class VotingUI {
         table.className = 'floor-table';
         
         if (building.isShop) {
-            // 商铺特殊处理
             table.appendChild(this.createShopTableHeader());
             table.appendChild(this.createShopTableBody(building));
         } else {
-            // 普通楼栋处理
             table.appendChild(this.createTableHeader(building.units, building.unitsPerFloor));
             table.appendChild(this.createTableBody(building));
         }
@@ -160,6 +135,12 @@ class VotingUI {
         tableDiv.style.display = 'block';
         tableDiv.appendChild(table);
         tablesContainer.appendChild(tableDiv);
+
+        // 恢复投票状态
+        this.restoreVoteState();
+        
+        // 更新总体统计
+        this.updateVoteStatistics();
     }
 
     static createTableHeader(unitCount, unitsPerFloor) {
@@ -295,6 +276,66 @@ class VotingUI {
         } else {
             searchResult.textContent = `找到 ${visibleCount} 个楼栋`;
         }
+    }
+
+    static toggleUnitSelection(button, unitCode) {
+        button.classList.toggle('selected');
+        // 保存选中状态到本地存储
+        this.saveVoteState(unitCode, button.classList.contains('selected'));
+    }
+
+    static saveVoteState(unitCode, isVoted) {
+        const voteState = this.getVoteState();
+        if (isVoted) {
+            voteState[unitCode] = {
+                voted: true,
+                timestamp: Date.now()
+            };
+        } else {
+            delete voteState[unitCode];
+        }
+        localStorage.setItem('voteState', JSON.stringify(voteState));
+        
+        // 更新所有统计数据
+        this.updateVoteStatistics();
+        this.updateBuildingProgress({});
+    }
+
+    static getVoteState() {
+        const savedState = localStorage.getItem('voteState');
+        return savedState ? JSON.parse(savedState) : {};
+    }
+
+    static updateVoteStatistics() {
+        const voteState = this.getVoteState();
+        const votedCount = Object.keys(voteState).filter(key => voteState[key].voted).length;
+        
+        // 更新右侧统计模块
+        const statsElement = document.getElementById('communityStats');
+        if (statsElement) {
+            const totalUnits = CONFIG.TOTAL_UNITS;
+            const percentage = ((votedCount / totalUnits) * 100).toFixed(1);
+            statsElement.innerHTML = `
+                <h3>小区投票统计</h3>
+                <p>总户数：${totalUnits}</p>
+                <p>已投票：${votedCount}</p>
+                <p>完成率：${percentage}%</p>
+                <div class="progress-bar" style="width: ${percentage}%"></div>
+            `;
+        }
+    }
+
+    static restoreVoteState() {
+        const voteState = this.getVoteState();
+        const buttons = document.querySelectorAll('.unit-btn');
+        buttons.forEach(button => {
+            const unitCode = button.textContent;
+            button.setAttribute('data-code', unitCode);
+            if (voteState[unitCode] && voteState[unitCode].voted) {
+                button.classList.add('voted');
+            }
+        });
+        this.updateVoteStatistics();
     }
 }
 

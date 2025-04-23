@@ -5,8 +5,33 @@ class VotingApp {
     static buildingData = {};
 
     static async init() {
-        this.initBuildingProgress();
-        this.startPolling();
+        this.setupEventListeners();
+        await this.startPolling();
+        // 页面加载时恢复投票状态和更新统计
+        VotingUI.restoreVoteState();
+        VotingUI.updateBuildingProgress(this.buildingData);
+    }
+
+    static setupEventListeners() {
+        const buildings = document.querySelectorAll('.building');
+        buildings.forEach(building => {
+            building.addEventListener('click', () => {
+                const buildingCode = building.getAttribute('data-code');
+                const buildingData = CONFIG.BUILDINGS.find(b => b.code === buildingCode);
+                if (buildingData) {
+                    this.currentBuilding = buildingData;
+                    VotingUI.generateUnitTable(buildingData);
+                }
+            });
+        });
+
+        // 添加搜索功能监听
+        const searchInput = document.getElementById('buildingSearch');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                VotingUI.filterBuildings(e.target.value);
+            });
+        }
     }
 
     static async startPolling() {
@@ -33,20 +58,30 @@ class VotingApp {
         this.currentBuilding = building;
         this.selectedUnits = [];
         
+        // 更新标题
         document.getElementById('buildingTitle').textContent = 
-            `${building.name} (${building.code}) 户号选择 - ${CONFIG.FLOOR_RANGE.START}至${CONFIG.FLOOR_RANGE.END}层`;
+            `${building.name} (${building.code}) 户号选择`;
         
+        // 生成单元格和表格
         VotingUI.generateUnitTabs(building.units);
         VotingUI.generateUnitTable(building);
-        this.updateSelectedCount();
         
+        // 显示信息面板
         document.getElementById('infoPanel').style.display = 'block';
+        
+        // 更新楼栋进度
+        VotingUI.updateBuildingProgress(this.buildingData);
     }
 
     static toggleUnitSelection(button, unitCode) {
-        button.classList.toggle('selected');
+        // 如果已经投票，不允许选择
+        if (button.classList.contains('voted')) {
+            return;
+        }
         
+        button.classList.toggle('selected');
         const index = this.selectedUnits.indexOf(unitCode);
+        
         if (index === -1) {
             this.selectedUnits.push(unitCode);
         } else {
@@ -54,6 +89,9 @@ class VotingApp {
         }
         
         this.updateSelectedCount();
+        
+        // 保存选中状态（但不是投票状态）
+        VotingUI.saveVoteState(unitCode, button.classList.contains('selected'));
     }
 
     static updateSelectedCount() {
@@ -94,14 +132,22 @@ class VotingApp {
                     totalUnits
                 );
 
-                this.buildingData = result.buildings;
-                this.votedUnits = new Set(result.votedUnits);
-                
+                // 更新本地存储中的投票状态
+                this.selectedUnits.forEach(unitCode => {
+                    const button = document.querySelector(`.unit-btn[data-code="${unitCode}"]`);
+                    if (button) {
+                        button.classList.remove('selected');
+                        button.classList.add('voted');
+                        // 保存到本地存储，标记为已投票
+                        VotingUI.saveVoteState(unitCode, true);
+                    }
+                });
+
+                // 更新楼栋进度
                 VotingUI.updateBuildingProgress(this.buildingData);
-                VotingUI.updateVotedUnits(this.votedUnits);
                 
                 alert(`投票成功！\n\n您已为${this.currentBuilding.name}的以下户号投票:\n${this.selectedUnits.join('\n')}`);
-                this.resetSelection();
+                this.selectedUnits = []; // 清空选中的单元
             } catch (error) {
                 const errorData = JSON.parse(error.message);
                 if (errorData.error) {
@@ -131,4 +177,22 @@ class VotingApp {
             }
         });
     }
-} 
+
+    static async updateBuildingProgress() {
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/progress`);
+            const buildingData = await response.json();
+            VotingUI.updateBuildingProgress(buildingData);
+        } catch (error) {
+            console.error('Failed to fetch building progress:', error);
+        }
+    }
+}
+
+// 页面加载完成后初始化应用
+document.addEventListener('DOMContentLoaded', () => {
+    VotingApp.init();
+});
+
+// 将VotingApp导出到全局作用域
+window.VotingApp = VotingApp; 
